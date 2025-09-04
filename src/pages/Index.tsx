@@ -29,6 +29,19 @@ const Index = () => {
     description: ''
   });
 
+  // Состояние для карты зданий
+  const [buildingsMap, setBuildingsMap] = useState([
+    { id: 1, name: 'Главный офис', x: 200, y: 150, width: 120, height: 80, color: '#3B82F6' },
+    { id: 2, name: 'Филиал №1', x: 400, y: 200, width: 100, height: 70, color: '#10B981' },
+    { id: 3, name: 'Склад', x: 150, y: 300, width: 90, height: 60, color: '#F59E0B' },
+    { id: 4, name: 'Филиал №2', x: 500, y: 100, width: 110, height: 75, color: '#8B5CF6' }
+  ]);
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [buildingDetailsOpen, setBuildingDetailsOpen] = useState(false);
+  const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
+  const [draggedBuilding, setDraggedBuilding] = useState(null);
+  const [hoveredBuilding, setHoveredBuilding] = useState(null);
+
   // Статистика для дашборда
   const stats = [
     { title: 'Всего оборудования', value: '1,247', icon: 'Monitor', change: '+12%' },
@@ -196,6 +209,63 @@ const Index = () => {
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
+  // Обработчики для карты зданий
+  const handleBuildingClick = (building: any) => {
+    setSelectedBuilding(building);
+    setBuildingDetailsOpen(true);
+  };
+
+  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isCreatingBuilding) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      const newBuilding = {
+        id: Date.now(),
+        name: `Новое здание ${buildingsMap.length + 1}`,
+        x: x - 50,
+        y: y - 30,
+        width: 100,
+        height: 60,
+        color: '#6B7280'
+      };
+      
+      setBuildingsMap(prev => [...prev, newBuilding]);
+      setIsCreatingBuilding(false);
+    }
+  };
+
+  const handleBuildingDrag = (building: any, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.offsetParent?.getBoundingClientRect();
+    if (!rect) return;
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startBuildingX = building.x;
+    const startBuildingY = building.y;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      setBuildingsMap(prev => prev.map(b => 
+        b.id === building.id 
+          ? { ...b, x: startBuildingX + deltaX, y: startBuildingY + deltaY }
+          : b
+      ));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -281,8 +351,9 @@ const Index = () => {
 
         {/* Основной контент в табах */}
         <Tabs defaultValue="equipment" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="equipment">Оборудование</TabsTrigger>
+            <TabsTrigger value="map">Карта зданий</TabsTrigger>
             <TabsTrigger value="buildings">Здания</TabsTrigger>
             <TabsTrigger value="departments">Отделы</TabsTrigger>
             <TabsTrigger value="computers">Компьютеры</TabsTrigger>
@@ -353,6 +424,133 @@ const Index = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Карта зданий */}
+          <TabsContent value="map">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+              <div className="xl:col-span-3">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center">
+                        <Icon name="Map" size={20} className="mr-2" />
+                        Интерактивная карта зданий
+                      </CardTitle>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant={isCreatingBuilding ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setIsCreatingBuilding(!isCreatingBuilding)}
+                        >
+                          <Icon name="Plus" size={16} className="mr-2" />
+                          {isCreatingBuilding ? 'Отменить' : 'Добавить здание'}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div 
+                      className={`relative w-full h-96 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden ${isCreatingBuilding ? 'cursor-crosshair' : 'cursor-default'}`}
+                      onClick={handleMapClick}
+                      style={{ minHeight: '400px' }}
+                    >
+                      {/* Сетка карты */}
+                      <div className="absolute inset-0 opacity-20">
+                        {Array.from({ length: 20 }, (_, i) => (
+                          <div key={`h-${i}`} className="absolute w-full border-t border-gray-300" style={{ top: `${i * 5}%` }} />
+                        ))}
+                        {Array.from({ length: 30 }, (_, i) => (
+                          <div key={`v-${i}`} className="absolute h-full border-l border-gray-300" style={{ left: `${i * 3.33}%` }} />
+                        ))}
+                      </div>
+
+                      {/* Здания на карте */}
+                      {buildingsMap.map((building) => (
+                        <div
+                          key={building.id}
+                          className="absolute cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-lg group"
+                          style={{
+                            left: building.x,
+                            top: building.y,
+                            width: building.width,
+                            height: building.height,
+                            backgroundColor: building.color,
+                            borderRadius: '8px',
+                            border: selectedBuilding?.id === building.id ? '3px solid #F59E0B' : '2px solid rgba(255,255,255,0.8)'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuildingClick(building);
+                          }}
+                          onMouseDown={(e) => handleBuildingDrag(building, e)}
+                          onMouseEnter={() => setHoveredBuilding(building)}
+                          onMouseLeave={() => setHoveredBuilding(null)}
+                        >
+                          <div className="flex items-center justify-center h-full text-white font-semibold text-sm text-center px-2">
+                            <Icon name="Building" size={16} className="mr-1" />
+                            {building.name}
+                          </div>
+                          
+                          {/* Tooltip */}
+                          {hoveredBuilding?.id === building.id && (
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                              {building.name}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Инструкция */}
+                      {isCreatingBuilding && (
+                        <div className="absolute top-4 left-4 bg-blue-100 border border-blue-300 rounded-lg p-3">
+                          <p className="text-blue-800 text-sm font-medium">Кликните по карте, чтобы создать новое здание</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 text-sm text-gray-600">
+                      <p>💡 Подсказка: Наведите курсор на здание для просмотра названия, кликните для открытия карточки, перетаскивайте для перемещения</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Панель управления */}
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Управление зданиями</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-sm">
+                      <p className="font-medium mb-2">Всего зданий: {buildingsMap.length}</p>
+                      <div className="space-y-2">
+                        {buildingsMap.map((building) => (
+                          <div key={building.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className="w-4 h-4 rounded"
+                                style={{ backgroundColor: building.color }}
+                              ></div>
+                              <span className="text-sm">{building.name}</span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleBuildingClick(building)}
+                            >
+                              <Icon name="Eye" size={14} />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Здания */}
@@ -705,6 +903,193 @@ const Index = () => {
                 Сохранить
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Модальное окно деталей здания */}
+        <Dialog open={buildingDetailsOpen} onOpenChange={setBuildingDetailsOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Icon name="Building" size={20} className="mr-2" />
+                {selectedBuilding?.name}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedBuilding && (
+              <div className="py-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Информация о здании */}
+                  <div className="lg:col-span-1">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Информация о здании</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label>Название</Label>
+                          <Input 
+                            value={selectedBuilding.name} 
+                            onChange={(e) => {
+                              setBuildingsMap(prev => prev.map(b => 
+                                b.id === selectedBuilding.id ? { ...b, name: e.target.value } : b
+                              ));
+                              setSelectedBuilding({ ...selectedBuilding, name: e.target.value });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label>Адрес</Label>
+                          <Input 
+                            value={buildings.find(b => b.name === selectedBuilding.name)?.address || 'Не указан'}
+                            disabled
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label>Цвет здания</Label>
+                            <div className="flex space-x-2 mt-2">
+                              {['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#6B7280'].map((color) => (
+                                <button
+                                  key={color}
+                                  className={`w-8 h-8 rounded-full border-2 ${selectedBuilding.color === color ? 'border-gray-800' : 'border-gray-300'}`}
+                                  style={{ backgroundColor: color }}
+                                  onClick={() => {
+                                    setBuildingsMap(prev => prev.map(b => 
+                                      b.id === selectedBuilding.id ? { ...b, color } : b
+                                    ));
+                                    setSelectedBuilding({ ...selectedBuilding, color });
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Отделов:</span>
+                              <p className="text-lg font-bold text-primary">
+                                {buildings.find(b => b.name === selectedBuilding.name)?.departments || 0}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="font-medium">Оборудования:</span>
+                              <p className="text-lg font-bold text-primary">
+                                {buildings.find(b => b.name === selectedBuilding.name)?.equipment || 0}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Оборудование в здании */}
+                  <div className="lg:col-span-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center">
+                          <Icon name="Package" size={18} className="mr-2" />
+                          Оборудование в здании
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Статистика оборудования */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            {[
+                              { 
+                                type: 'Компьютер', 
+                                count: equipmentData.filter(e => e.building === selectedBuilding.name && e.type === 'Компьютер').length,
+                                icon: 'Monitor'
+                              },
+                              { 
+                                type: 'Принтер', 
+                                count: equipmentData.filter(e => e.building === selectedBuilding.name && (e.type === 'Принтер' || e.type === 'МФУ')).length,
+                                icon: 'Printer'
+                              },
+                              { 
+                                type: 'Мониторы', 
+                                count: equipmentData.filter(e => e.building === selectedBuilding.name && e.type === 'Монитор').length,
+                                icon: 'Monitor'
+                              },
+                              { 
+                                type: 'Другое', 
+                                count: equipmentData.filter(e => e.building === selectedBuilding.name && !['Компьютер', 'Принтер', 'МФУ', 'Монитор'].includes(e.type)).length,
+                                icon: 'Package'
+                              }
+                            ].map((stat, index) => (
+                              <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                  <Icon name={stat.icon} size={16} className="text-primary" />
+                                  <span className="text-sm font-medium">{stat.type}</span>
+                                </div>
+                                <p className="text-xl font-bold text-primary mt-1">{stat.count}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Список оборудования */}
+                          <div className="max-h-64 overflow-y-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Название</TableHead>
+                                  <TableHead>Тип</TableHead>
+                                  <TableHead>Отдел</TableHead>
+                                  <TableHead>Статус</TableHead>
+                                  <TableHead>Инв. номер</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {equipmentData
+                                  .filter(item => item.building === selectedBuilding.name)
+                                  .map((item) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{item.type}</TableCell>
+                                    <TableCell>{item.department}</TableCell>
+                                    <TableCell>
+                                      <Badge className={getStatusBadge(item.status)}>
+                                        {item.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">{item.inventoryNumber}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {equipmentData.filter(item => item.building === selectedBuilding.name).length === 0 && (
+                              <div className="text-center py-8 text-gray-500">
+                                <Icon name="Package" size={48} className="mx-auto mb-2 opacity-50" />
+                                <p>В этом здании пока нет оборудования</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4 border-t mt-6">
+                  <Button variant="outline" onClick={() => setBuildingDetailsOpen(false)}>
+                    Закрыть
+                  </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={() => {
+                      setBuildingsMap(prev => prev.filter(b => b.id !== selectedBuilding.id));
+                      setBuildingDetailsOpen(false);
+                      setSelectedBuilding(null);
+                    }}
+                  >
+                    <Icon name="Trash2" size={16} className="mr-2" />
+                    Удалить здание
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
