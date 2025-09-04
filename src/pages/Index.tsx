@@ -40,11 +40,14 @@ const Index = () => {
 
   // Данные оборудования
   const equipment = [
-    { id: 1, name: 'Dell OptiPlex 7090', type: 'Компьютер', department: 'Бухгалтерия', status: 'Работает', serialNumber: 'DO7090-001' },
-    { id: 2, name: 'HP LaserJet Pro M404n', type: 'Принтер', department: 'Отдел продаж', status: 'Работает', serialNumber: 'HP404-002' },
-    { id: 3, name: 'Canon imageCLASS MF445dw', type: 'МФУ', department: 'Бухгалтерия', status: 'На ремонте', serialNumber: 'CN445-003' },
-    { id: 4, name: 'Logitech MX Master 3', type: 'Мышь', department: 'IT отдел', status: 'Работает', serialNumber: 'LG-MX3-004' },
-    { id: 5, name: 'Dell UltraSharp U2720Q', type: 'Монитор', department: 'Маркетинг', status: 'Работает', serialNumber: 'DU272-005' }
+    { id: 1, name: 'Dell OptiPlex 7090', type: 'Компьютер', department: 'Бухгалтерия', building: 'Главный офис', status: 'Работает', serialNumber: 'DO7090-001' },
+    { id: 2, name: 'HP LaserJet Pro M404n', type: 'Принтер', department: 'Отдел продаж', building: 'Главный офис', status: 'Работает', serialNumber: 'HP404-002' },
+    { id: 3, name: 'Canon imageCLASS MF445dw', type: 'МФУ', department: 'Бухгалтерия', building: 'Главный офис', status: 'На ремонте', serialNumber: 'CN445-003' },
+    { id: 4, name: 'Logitech MX Master 3', type: 'Мышь', department: 'IT отдел', building: 'Главный офис', status: 'Работает', serialNumber: 'LG-MX3-004' },
+    { id: 5, name: 'Dell UltraSharp U2720Q', type: 'Монитор', department: 'Маркетинг', building: 'Филиал №1', status: 'Работает', serialNumber: 'DU272-005' },
+    { id: 6, name: 'Lenovo ThinkPad T14', type: 'Ноутбук', department: 'Администрация', building: 'Филиал №2', status: 'Работает', serialNumber: 'LT14-006' },
+    { id: 7, name: 'Epson WorkForce Pro WF-4830', type: 'МФУ', department: 'Маркетинг', building: 'Филиал №1', status: 'Работает', serialNumber: 'EP4830-007' },
+    { id: 8, name: 'ASUS ROG Monitor 27"', type: 'Монитор', department: 'IT отдел', building: 'Главный офис', status: 'Работает', serialNumber: 'ASUS27-008' }
   ];
 
   const getStatusBadge = (status: string) => {
@@ -166,6 +169,7 @@ const Index = () => {
                     <TableRow>
                       <TableHead>Наименование</TableHead>
                       <TableHead>Тип</TableHead>
+                      <TableHead>Здание</TableHead>
                       <TableHead>Отдел</TableHead>
                       <TableHead>Серийный номер</TableHead>
                       <TableHead>Статус</TableHead>
@@ -173,10 +177,19 @@ const Index = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {equipment.map((item) => (
+                    {equipment
+                      .filter(item => 
+                        (!selectedBuilding || item.building === selectedBuilding) &&
+                        (!selectedDepartment || item.department === selectedDepartment) &&
+                        (!searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+                      )
+                      .map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>{item.type}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{item.building}</TableCell>
                         <TableCell>{item.department}</TableCell>
                         <TableCell className="font-mono text-sm">{item.serialNumber}</TableCell>
                         <TableCell>
