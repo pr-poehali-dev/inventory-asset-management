@@ -13,7 +13,7 @@ import Icon from '@/components/ui/icon';
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [selectedBuildingFilter, setSelectedBuildingFilter] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -321,7 +321,7 @@ const Index = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-              <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
+              <Select value={selectedBuildingFilter} onValueChange={setSelectedBuildingFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите здание" />
                 </SelectTrigger>
@@ -386,7 +386,7 @@ const Index = () => {
                   <TableBody>
                     {equipmentData
                       .filter(item => 
-                        (!selectedBuilding || item.building === selectedBuilding) &&
+                        (!selectedBuildingFilter || item.building === selectedBuildingFilter) &&
                         (!selectedDepartment || item.department === selectedDepartment) &&
                         (!searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
