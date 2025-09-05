@@ -41,6 +41,25 @@ const Index = () => {
   const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
   const [draggedBuilding, setDraggedBuilding] = useState(null);
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
+  
+  // Состояние для добавления отдела
+  const [isAddDepartmentOpen, setIsAddDepartmentOpen] = useState(false);
+  const [departmentForm, setDepartmentForm] = useState({
+    name: '',
+    building: '',
+    employees: '',
+    computers: '',
+    equipment: ''
+  });
+  
+  // Состояние для отделов (делаем динамическим)
+  const [departmentsData, setDepartmentsData] = useState([
+    { id: 1, name: 'Бухгалтерия', building: 'Главный офис', employees: 15, computers: 15, equipment: 45 },
+    { id: 2, name: 'Отдел продаж', building: 'Главный офис', employees: 22, computers: 22, equipment: 68 },
+    { id: 3, name: 'IT отдел', building: 'Главный офис', employees: 8, computers: 12, equipment: 85 },
+    { id: 4, name: 'Маркетинг', building: 'Филиал №1', employees: 12, computers: 12, equipment: 38 },
+    { id: 5, name: 'Администрация', building: 'Главный офис', employees: 6, computers: 6, equipment: 28 }
+  ]);
 
   // Статистика для дашборда
   const stats = [
@@ -266,6 +285,36 @@ const Index = () => {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  // Обработчик сохранения нового отдела
+  const handleSaveDepartment = () => {
+    if (!departmentForm.name.trim() || !departmentForm.building.trim()) {
+      alert('Пожалуйста, заполните обязательные поля: название и здание');
+      return;
+    }
+
+    const newDepartment = {
+      id: Math.max(...departmentsData.map(d => d.id)) + 1,
+      name: departmentForm.name.trim(),
+      building: departmentForm.building,
+      employees: parseInt(departmentForm.employees) || 0,
+      computers: parseInt(departmentForm.computers) || 0,
+      equipment: parseInt(departmentForm.equipment) || 0
+    };
+
+    setDepartmentsData(prev => [...prev, newDepartment]);
+    
+    // Сброс формы
+    setDepartmentForm({
+      name: '',
+      building: '',
+      employees: '',
+      computers: '',
+      equipment: ''
+    });
+    
+    setIsAddDepartmentOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -338,7 +387,7 @@ const Index = () => {
                   <SelectValue placeholder="Выберите отдел" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
+                  {departmentsData.map((dept) => (
                     <SelectItem key={dept.id} value={dept.name}>
                       {dept.name}
                     </SelectItem>
@@ -586,10 +635,16 @@ const Index = () => {
           <TabsContent value="departments">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Icon name="Users" size={20} className="mr-2" />
-                  Отделы организации
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <Icon name="Users" size={20} className="mr-2" />
+                    Отделы организации
+                  </CardTitle>
+                  <Button onClick={() => setIsAddDepartmentOpen(true)}>
+                    <Icon name="Plus" size={16} className="mr-2" />
+                    Добавить отдел
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -604,7 +659,7 @@ const Index = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {departments.map((dept) => (
+                    {departmentsData.map((dept) => (
                       <TableRow key={dept.id}>
                         <TableCell className="font-medium">{dept.name}</TableCell>
                         <TableCell>{dept.building}</TableCell>
@@ -899,6 +954,93 @@ const Index = () => {
                 Отмена
               </Button>
               <Button onClick={handleSaveEquipment} className="bg-primary hover:bg-primary/90">
+                <Icon name="Save" size={16} className="mr-2" />
+                Сохранить
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Модальное окно добавления отдела */}
+        <Dialog open={isAddDepartmentOpen} onOpenChange={setIsAddDepartmentOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Icon name="Plus" size={20} className="mr-2" />
+                Добавить новый отдел
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="departmentName">Название отдела</Label>
+                <Input
+                  id="departmentName"
+                  placeholder="Введите название отдела"
+                  value={departmentForm.name}
+                  onChange={(e) => setDepartmentForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="departmentBuilding">Здание</Label>
+                <Select 
+                  value={departmentForm.building} 
+                  onValueChange={(value) => setDepartmentForm(prev => ({ ...prev, building: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите здание" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings.map((building) => (
+                      <SelectItem key={building.id} value={building.name}>
+                        {building.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="departmentEmployees">Количество сотрудников</Label>
+                  <Input
+                    id="departmentEmployees"
+                    type="number"
+                    placeholder="0"
+                    value={departmentForm.employees}
+                    onChange={(e) => setDepartmentForm(prev => ({ ...prev, employees: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="departmentComputers">Компьютеры</Label>
+                  <Input
+                    id="departmentComputers"
+                    type="number"
+                    placeholder="0"
+                    value={departmentForm.computers}
+                    onChange={(e) => setDepartmentForm(prev => ({ ...prev, computers: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="departmentEquipment">Всего оборудования</Label>
+                  <Input
+                    id="departmentEquipment"
+                    type="number"
+                    placeholder="0"
+                    value={departmentForm.equipment}
+                    onChange={(e) => setDepartmentForm(prev => ({ ...prev, equipment: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsAddDepartmentOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={handleSaveDepartment}>
                 <Icon name="Save" size={16} className="mr-2" />
                 Сохранить
               </Button>
