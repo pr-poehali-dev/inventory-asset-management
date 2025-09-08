@@ -358,7 +358,7 @@ const Index = () => {
   };
 
   // Обработчик сохранения нового оборудования
-  const handleSaveEquipment = () => {
+  const handleAddEquipment = () => {
     if (!equipmentForm.name.trim() || !equipmentForm.type.trim()) {
       alert('Пожалуйста, заполните обязательные поля: название и тип');
       return;
@@ -1498,7 +1498,7 @@ const Index = () => {
                 <Button variant="outline" onClick={() => setIsAddEquipmentOpen(false)}>
                   Отмена
                 </Button>
-                <Button onClick={handleSaveEquipment}>
+                <Button onClick={handleAddEquipment}>
                   <Icon name="Plus" size={16} className="mr-2" />
                   Добавить оборудование
                 </Button>
