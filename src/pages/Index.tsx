@@ -52,6 +52,38 @@ const Index = () => {
     equipment: ''
   });
   
+  // Состояние для добавления оборудования
+  const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
+  const [isAddingNewType, setIsAddingNewType] = useState(false);
+  const [newEquipmentType, setNewEquipmentType] = useState('');
+  const [equipmentForm, setEquipmentForm] = useState({
+    name: '',
+    type: '',
+    department: '',
+    building: '',
+    status: 'Работает',
+    serialNumber: '',
+    inventoryNumber: '',
+    specifications: '',
+    description: ''
+  });
+  
+  // Типы оборудования (можно расширять)
+  const [equipmentTypes, setEquipmentTypes] = useState([
+    'Компьютер',
+    'Ноутбук', 
+    'Принтер',
+    'МФУ',
+    'Монитор',
+    'Телефон',
+    'Планшет',
+    'Проектор',
+    'Сканер',
+    'UPS',
+    'Коммутатор',
+    'Маршрутизатор'
+  ]);
+  
   // Состояние для отделов (делаем динамическим)
   const [departmentsData, setDepartmentsData] = useState([
     { id: 1, name: 'Бухгалтерия', building: 'Главный офис', employees: 15, computers: 15, equipment: 45 },
@@ -315,6 +347,75 @@ const Index = () => {
     setIsAddDepartmentOpen(false);
   };
 
+  // Обработчик добавления нового типа оборудования
+  const handleAddNewType = () => {
+    if (newEquipmentType.trim()) {
+      setEquipmentTypes(prev => [...prev, newEquipmentType.trim()]);
+      setEquipmentForm(prev => ({ ...prev, type: newEquipmentType.trim() }));
+      setNewEquipmentType('');
+      setIsAddingNewType(false);
+    }
+  };
+
+  // Обработчик сохранения нового оборудования
+  const handleSaveEquipment = () => {
+    if (!equipmentForm.name.trim() || !equipmentForm.type.trim()) {
+      alert('Пожалуйста, заполните обязательные поля: название и тип');
+      return;
+    }
+
+    const newEquipment = {
+      id: Math.max(...equipmentData.map(e => e.id)) + 1,
+      name: equipmentForm.name.trim(),
+      type: equipmentForm.type,
+      department: equipmentForm.department,
+      building: equipmentForm.building,
+      status: equipmentForm.status,
+      serialNumber: equipmentForm.serialNumber.trim(),
+      inventoryNumber: equipmentForm.inventoryNumber.trim(),
+      specifications: equipmentForm.specifications.trim(),
+      description: equipmentForm.description.trim()
+    };
+
+    setEquipmentData(prev => [...prev, newEquipment]);
+    
+    // Сброс формы
+    setEquipmentForm({
+      name: '',
+      type: '',
+      department: '',
+      building: '',
+      status: 'Работает',
+      serialNumber: '',
+      inventoryNumber: '',
+      specifications: '',
+      description: ''
+    });
+    
+    setIsAddEquipmentOpen(false);
+  };
+
+  // Обработчик экспорта данных
+  const handleExport = () => {
+    const exportData = {
+      equipment: equipmentData,
+      departments: departmentsData,
+      buildings: buildings,
+      exportDate: new Date().toLocaleDateString('ru-RU')
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `inventory_export_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -326,11 +427,11 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gray-900">Инвентаризация</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Icon name="Download" size={16} className="mr-2" />
                 Экспорт
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setIsAddEquipmentOpen(true)}>
                 <Icon name="Plus" size={16} className="mr-2" />
                 Добавить
               </Button>
@@ -1232,6 +1333,177 @@ const Index = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Модальное окно добавления оборудования */}
+        <Dialog open={isAddEquipmentOpen} onOpenChange={setIsAddEquipmentOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Icon name="Plus" size={20} className="mr-2" />
+                Добавить оборудование
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="equipment-name">Название оборудования *</Label>
+                  <Input
+                    id="equipment-name"
+                    value={equipmentForm.name}
+                    onChange={(e) => setEquipmentForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Например: Dell OptiPlex 7090"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="equipment-type">Тип оборудования *</Label>
+                  <div className="flex gap-2">
+                    <Select 
+                      value={equipmentForm.type} 
+                      onValueChange={(value) => {
+                        if (value === 'new-type') {
+                          setIsAddingNewType(true);
+                        } else {
+                          setEquipmentForm(prev => ({ ...prev, type: value }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Выберите тип" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {equipmentTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                        <SelectItem value="new-type">+ Создать новый тип</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {isAddingNewType && (
+                  <div className="col-span-2">
+                    <Label htmlFor="new-type">Новый тип оборудования</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="new-type"
+                        value={newEquipmentType}
+                        onChange={(e) => setNewEquipmentType(e.target.value)}
+                        placeholder="Введите название нового типа"
+                      />
+                      <Button onClick={handleAddNewType} size="sm">
+                        <Icon name="Plus" size={16} />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setIsAddingNewType(false);
+                          setNewEquipmentType('');
+                        }}
+                      >
+                        <Icon name="X" size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="equipment-department">Отдел</Label>
+                  <Select 
+                    value={equipmentForm.department} 
+                    onValueChange={(value) => setEquipmentForm(prev => ({ ...prev, department: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите отдел" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departmentsData.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="equipment-building">Здание</Label>
+                  <Select 
+                    value={equipmentForm.building} 
+                    onValueChange={(value) => setEquipmentForm(prev => ({ ...prev, building: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите здание" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {buildings.map((building) => (
+                        <SelectItem key={building.id} value={building.name}>{building.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="equipment-status">Статус</Label>
+                  <Select 
+                    value={equipmentForm.status} 
+                    onValueChange={(value) => setEquipmentForm(prev => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Работает">Работает</SelectItem>
+                      <SelectItem value="В ремонте">В ремонте</SelectItem>
+                      <SelectItem value="Списано">Списано</SelectItem>
+                      <SelectItem value="На складе">На складе</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="equipment-serial">Серийный номер</Label>
+                  <Input
+                    id="equipment-serial"
+                    value={equipmentForm.serialNumber}
+                    onChange={(e) => setEquipmentForm(prev => ({ ...prev, serialNumber: e.target.value }))}
+                    placeholder="Серийный номер"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="equipment-inventory">Инвентарный номер</Label>
+                  <Input
+                    id="equipment-inventory"
+                    value={equipmentForm.inventoryNumber}
+                    onChange={(e) => setEquipmentForm(prev => ({ ...prev, inventoryNumber: e.target.value }))}
+                    placeholder="ИНВ-001"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="equipment-specs">Характеристики</Label>
+                  <Input
+                    id="equipment-specs"
+                    value={equipmentForm.specifications}
+                    onChange={(e) => setEquipmentForm(prev => ({ ...prev, specifications: e.target.value }))}
+                    placeholder="Intel Core i7, 16GB RAM"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="equipment-description">Описание</Label>
+                <Textarea
+                  id="equipment-description"
+                  value={equipmentForm.description}
+                  onChange={(e) => setEquipmentForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Дополнительные сведения об оборудовании"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAddEquipmentOpen(false)}>
+                  Отмена
+                </Button>
+                <Button onClick={handleSaveEquipment}>
+                  <Icon name="Plus" size={16} className="mr-2" />
+                  Добавить оборудование
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
