@@ -85,6 +85,7 @@ const Index = () => {
   const [scanProgress, setScanProgress] = useState(0);
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
   const [scannedDevices, setScannedDevices] = useState([]);
+  const [subnetInput, setSubnetInput] = useState('192.168.1.0/24');
   
   // Типы оборудования (можно расширять)
   const [equipmentTypes, setEquipmentTypes] = useState([
@@ -495,9 +496,20 @@ const Index = () => {
     setIsAddEquipmentOpen(false);
   };
 
+  // Обработчик открытия диалога сканирования
+  const handleOpenScanDialog = () => {
+    setIsScanDialogOpen(true);
+    setScannedDevices([]);
+    setScanProgress(0);
+  };
+
   // Обработчик сканирования сети
   const handleNetworkScan = async () => {
-    setIsScanDialogOpen(true);
+    if (!subnetInput.trim()) {
+      alert('Пожалуйста, укажите подсеть для сканирования');
+      return;
+    }
+
     setIsScanning(true);
     setScanProgress(0);
     setScannedDevices([]);
@@ -511,8 +523,8 @@ const Index = () => {
     }, 200);
 
     try {
-      // Вызов backend функции
-      const response = await fetch('https://functions.poehali.dev/f02e295a-b094-4f67-9118-fad70534a1b1?subnet=192.168.1.0/24');
+      // Вызов backend функции с указанной подсетью
+      const response = await fetch(`https://functions.poehali.dev/f02e295a-b094-4f67-9118-fad70534a1b1?subnet=${encodeURIComponent(subnetInput)}`);
       const data = await response.json();
 
       clearInterval(progressInterval);
@@ -587,7 +599,7 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gray-900">Инвентаризация</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" onClick={handleNetworkScan}>
+              <Button variant="outline" size="sm" onClick={handleOpenScanDialog}>
                 <Icon name="Search" size={16} className="mr-2" />
                 Поиск оборудования
               </Button>
@@ -1831,10 +1843,56 @@ const Index = () => {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Настройки сканирования */}
+              {!isScanning && scannedDevices.length === 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="subnet-input">Диапазон IP для сканирования</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="subnet-input"
+                        value={subnetInput}
+                        onChange={(e) => setSubnetInput(e.target.value)}
+                        placeholder="192.168.1.0/24"
+                        className="font-mono flex-1"
+                      />
+                      <Select value={subnetInput} onValueChange={setSubnetInput}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Быстрый выбор" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="192.168.0.0/24">192.168.0.0/24</SelectItem>
+                          <SelectItem value="192.168.1.0/24">192.168.1.0/24</SelectItem>
+                          <SelectItem value="192.168.2.0/24">192.168.2.0/24</SelectItem>
+                          <SelectItem value="10.0.0.0/24">10.0.0.0/24</SelectItem>
+                          <SelectItem value="172.16.0.0/24">172.16.0.0/24</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Укажите подсеть вручную или выберите из списка
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start space-x-2">
+                      <Icon name="Info" size={16} className="text-blue-600 mt-0.5" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium">Как это работает:</p>
+                        <ul className="list-disc list-inside mt-1 space-y-1">
+                          <li>Сканируются активные устройства в указанной подсети</li>
+                          <li>Определяется тип устройства и MAC-адрес</li>
+                          <li>Вы можете добавить найденные устройства в базу</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isScanning && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span>Сканирование устройств в сети...</span>
+                    <span>Сканирование устройств в сети {subnetInput}...</span>
                     <span className="font-semibold">{scanProgress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -1891,21 +1949,14 @@ const Index = () => {
                 </div>
               )}
 
-              {!isScanning && scannedDevices.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Icon name="Wifi" size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Нажмите кнопку "Сканировать", чтобы найти устройства в сети</p>
-                </div>
-              )}
-
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsScanDialogOpen(false)}>
                   Закрыть
                 </Button>
-                {!isScanning && scannedDevices.length === 0 && (
+                {!isScanning && (
                   <Button onClick={handleNetworkScan}>
                     <Icon name="Search" size={16} className="mr-2" />
-                    Сканировать
+                    {scannedDevices.length > 0 ? 'Сканировать снова' : 'Начать сканирование'}
                   </Button>
                 )}
               </div>
