@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState('equipment');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBuildingFilter, setSelectedBuildingFilter] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -106,10 +107,10 @@ const Index = () => {
 
   // Статистика для дашборда
   const stats = [
-    { title: 'Всего оборудования', value: '1,247', icon: 'Monitor', change: '+12%' },
-    { title: 'Компьютеры', value: '485', icon: 'Laptop', change: '+5%' },
-    { title: 'Принтеры и МФУ', value: '128', icon: 'Printer', change: '+8%' },
-    { title: 'Периферия', value: '634', icon: 'Mouse', change: '+15%' }
+    { title: 'Всего оборудования', value: '1,247', icon: 'Monitor', change: '+12%', tab: 'equipment' },
+    { title: 'Компьютеры', value: '485', icon: 'Laptop', change: '+5%', tab: 'computers' },
+    { title: 'Принтеры и МФУ', value: '128', icon: 'Printer', change: '+8%', tab: 'printers' },
+    { title: 'Периферия', value: '634', icon: 'Mouse', change: '+15%', tab: 'equipment' }
   ];
 
   // Данные зданий (делаем динамическим)
@@ -537,7 +538,11 @@ const Index = () => {
         {/* Статистика */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+            <Card 
+              key={index} 
+              className="hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer"
+              onClick={() => setActiveTab(stat.tab)}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -593,7 +598,7 @@ const Index = () => {
         </Card>
 
         {/* Основной контент в табах */}
-        <Tabs defaultValue="equipment" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="equipment">Оборудование</TabsTrigger>
             <TabsTrigger value="map">Карта зданий</TabsTrigger>
