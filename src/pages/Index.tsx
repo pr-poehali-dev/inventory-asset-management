@@ -52,6 +52,17 @@ const Index = () => {
     equipment: ''
   });
   
+  // Состояние для редактирования отдела
+  const [isEditDepartmentOpen, setIsEditDepartmentOpen] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [departmentEditForm, setDepartmentEditForm] = useState({
+    name: '',
+    building: '',
+    employees: '',
+    computers: '',
+    equipment: ''
+  });
+  
   // Состояние для добавления оборудования
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
   const [isAddingNewType, setIsAddingNewType] = useState(false);
@@ -345,6 +356,43 @@ const Index = () => {
     });
     
     setIsAddDepartmentOpen(false);
+  };
+
+  // Обработчик открытия редактирования отдела
+  const handleEditDepartment = (dept: any) => {
+    setEditingDepartment(dept);
+    setDepartmentEditForm({
+      name: dept.name,
+      building: dept.building,
+      employees: dept.employees.toString(),
+      computers: dept.computers.toString(),
+      equipment: dept.equipment.toString()
+    });
+    setIsEditDepartmentOpen(true);
+  };
+
+  // Обработчик сохранения изменений отдела
+  const handleSaveDepartmentEdit = () => {
+    if (!departmentEditForm.name.trim() || !departmentEditForm.building.trim()) {
+      alert('Пожалуйста, заполните обязательные поля: название и здание');
+      return;
+    }
+
+    setDepartmentsData(prev => prev.map(dept =>
+      dept.id === editingDepartment.id
+        ? {
+            ...dept,
+            name: departmentEditForm.name.trim(),
+            building: departmentEditForm.building,
+            employees: parseInt(departmentEditForm.employees) || 0,
+            computers: parseInt(departmentEditForm.computers) || 0,
+            equipment: parseInt(departmentEditForm.equipment) || 0
+          }
+        : dept
+    ));
+
+    setIsEditDepartmentOpen(false);
+    setEditingDepartment(null);
   };
 
   // Обработчик добавления нового типа оборудования
@@ -772,7 +820,7 @@ const Index = () => {
                             <Button variant="ghost" size="sm">
                               <Icon name="Eye" size={16} />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditDepartment(dept)}>
                               <Icon name="Edit" size={16} />
                             </Button>
                           </div>
@@ -1501,6 +1549,83 @@ const Index = () => {
                 <Button onClick={handleAddEquipment}>
                   <Icon name="Plus" size={16} className="mr-2" />
                   Добавить оборудование
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Диалог редактирования отдела */}
+        <Dialog open={isEditDepartmentOpen} onOpenChange={setIsEditDepartmentOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Редактировать отдел</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-dept-name">Название отдела *</Label>
+                <Input
+                  id="edit-dept-name"
+                  value={departmentEditForm.name}
+                  onChange={(e) => setDepartmentEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Введите название отдела"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-dept-building">Здание *</Label>
+                <Select 
+                  value={departmentEditForm.building} 
+                  onValueChange={(value) => setDepartmentEditForm(prev => ({ ...prev, building: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите здание" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings.map((building) => (
+                      <SelectItem key={building.id} value={building.name}>{building.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-dept-employees">Сотрудников</Label>
+                  <Input
+                    id="edit-dept-employees"
+                    type="number"
+                    value={departmentEditForm.employees}
+                    onChange={(e) => setDepartmentEditForm(prev => ({ ...prev, employees: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-dept-computers">Компьютеров</Label>
+                  <Input
+                    id="edit-dept-computers"
+                    type="number"
+                    value={departmentEditForm.computers}
+                    onChange={(e) => setDepartmentEditForm(prev => ({ ...prev, computers: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-dept-equipment">Всего оборудования</Label>
+                  <Input
+                    id="edit-dept-equipment"
+                    type="number"
+                    value={departmentEditForm.equipment}
+                    onChange={(e) => setDepartmentEditForm(prev => ({ ...prev, equipment: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsEditDepartmentOpen(false)}>
+                  Отмена
+                </Button>
+                <Button onClick={handleSaveDepartmentEdit}>
+                  <Icon name="Save" size={16} className="mr-2" />
+                  Сохранить изменения
                 </Button>
               </div>
             </div>
