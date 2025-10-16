@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Сканирование сети по умолчанию",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "devices": "array",
+        "subnet": "string",
+        "total": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сканирование с указанием подсети",
+      "method": "GET",
+      "path": "/?subnet=192.168.0.0/24",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "subnet": "192.168.0.0/24"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "CORS preflight запрос",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

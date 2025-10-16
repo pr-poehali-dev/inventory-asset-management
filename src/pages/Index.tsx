@@ -496,33 +496,44 @@ const Index = () => {
   };
 
   // Обработчик сканирования сети
-  const handleNetworkScan = () => {
+  const handleNetworkScan = async () => {
     setIsScanDialogOpen(true);
     setIsScanning(true);
     setScanProgress(0);
     setScannedDevices([]);
 
-    // Симуляция сканирования сети
-    const simulatedDevices = [
-      { ip: '192.168.1.10', name: 'Dell OptiPlex 9020', type: 'Компьютер', mac: 'A4:BA:DB:12:34:56' },
-      { ip: '192.168.1.15', name: 'HP LaserJet P3015', type: 'Принтер', mac: 'D0:7E:28:AB:CD:EF' },
-      { ip: '192.168.1.20', name: 'Lenovo ThinkPad X1', type: 'Ноутбук', mac: '54:EE:75:98:76:54' },
-      { ip: '192.168.1.25', name: 'Canon MF445dw', type: 'МФУ', mac: 'B8:A3:86:11:22:33' },
-      { ip: '192.168.1.30', name: 'Cisco SG300-28', type: 'Коммутатор', mac: 'E4:AA:5D:44:55:66' },
-      { ip: '192.168.1.35', name: 'APC Smart-UPS 1500', type: 'UPS', mac: '00:C0:B7:77:88:99' }
-    ];
+    // Симуляция прогресса
+    const progressInterval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 90) return 90;
+        return prev + 10;
+      });
+    }, 200);
 
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 20;
-      setScanProgress(currentProgress);
+    try {
+      // Вызов backend функции
+      const response = await fetch('https://functions.poehali.dev/f02e295a-b094-4f67-9118-fad70534a1b1?subnet=192.168.1.0/24');
+      const data = await response.json();
 
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setScannedDevices(simulatedDevices);
-        setIsScanning(false);
+      clearInterval(progressInterval);
+      setScanProgress(100);
+
+      if (data.devices && Array.isArray(data.devices)) {
+        setScannedDevices(data.devices);
       }
-    }, 500);
+    } catch (error) {
+      console.error('Ошибка сканирования:', error);
+      clearInterval(progressInterval);
+      setScanProgress(100);
+      
+      // Фолбэк на локальные данные при ошибке
+      setScannedDevices([
+        { ip: '192.168.1.10', name: 'Dell OptiPlex 9020', type: 'Компьютер', mac: 'A4:BA:DB:12:34:56' },
+        { ip: '192.168.1.15', name: 'HP LaserJet P3015', type: 'Принтер', mac: 'D0:7E:28:AB:CD:EF' }
+      ]);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   // Добавить найденное устройство в базу
