@@ -80,6 +80,12 @@ const Index = () => {
     description: ''
   });
   
+  // Состояние для сканирования сети
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
+  const [scannedDevices, setScannedDevices] = useState([]);
+  
   // Типы оборудования (можно расширять)
   const [equipmentTypes, setEquipmentTypes] = useState([
     'Компьютер',
@@ -489,6 +495,55 @@ const Index = () => {
     setIsAddEquipmentOpen(false);
   };
 
+  // Обработчик сканирования сети
+  const handleNetworkScan = () => {
+    setIsScanDialogOpen(true);
+    setIsScanning(true);
+    setScanProgress(0);
+    setScannedDevices([]);
+
+    // Симуляция сканирования сети
+    const simulatedDevices = [
+      { ip: '192.168.1.10', name: 'Dell OptiPlex 9020', type: 'Компьютер', mac: 'A4:BA:DB:12:34:56' },
+      { ip: '192.168.1.15', name: 'HP LaserJet P3015', type: 'Принтер', mac: 'D0:7E:28:AB:CD:EF' },
+      { ip: '192.168.1.20', name: 'Lenovo ThinkPad X1', type: 'Ноутбук', mac: '54:EE:75:98:76:54' },
+      { ip: '192.168.1.25', name: 'Canon MF445dw', type: 'МФУ', mac: 'B8:A3:86:11:22:33' },
+      { ip: '192.168.1.30', name: 'Cisco SG300-28', type: 'Коммутатор', mac: 'E4:AA:5D:44:55:66' },
+      { ip: '192.168.1.35', name: 'APC Smart-UPS 1500', type: 'UPS', mac: '00:C0:B7:77:88:99' }
+    ];
+
+    let currentProgress = 0;
+    const interval = setInterval(() => {
+      currentProgress += 20;
+      setScanProgress(currentProgress);
+
+      if (currentProgress >= 100) {
+        clearInterval(interval);
+        setScannedDevices(simulatedDevices);
+        setIsScanning(false);
+      }
+    }, 500);
+  };
+
+  // Добавить найденное устройство в базу
+  const handleAddScannedDevice = (device: any) => {
+    const newEquipment = {
+      id: Math.max(...equipmentData.map(e => e.id)) + 1,
+      name: device.name,
+      type: device.type,
+      department: '',
+      building: '',
+      status: 'Работает',
+      serialNumber: device.mac,
+      inventoryNumber: '',
+      specifications: `IP: ${device.ip}, MAC: ${device.mac}`,
+      description: 'Добавлено через сканирование сети'
+    };
+
+    setEquipmentData(prev => [...prev, newEquipment]);
+    setScannedDevices(prev => prev.filter(d => d.ip !== device.ip));
+  };
+
   // Обработчик экспорта данных
   const handleExport = () => {
     const exportData = {
@@ -521,6 +576,10 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gray-900">Инвентаризация</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" onClick={handleNetworkScan}>
+                <Icon name="Search" size={16} className="mr-2" />
+                Поиск оборудования
+              </Button>
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Icon name="Download" size={16} className="mr-2" />
                 Экспорт
@@ -1746,6 +1805,98 @@ const Index = () => {
                   <Icon name="Save" size={16} className="mr-2" />
                   Сохранить изменения
                 </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Диалог сканирования сети */}
+        <Dialog open={isScanDialogOpen} onOpenChange={setIsScanDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Icon name="Search" size={20} className="mr-2" />
+                Сканирование сети
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {isScanning && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Сканирование устройств в сети...</span>
+                    <span className="font-semibold">{scanProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${scanProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!isScanning && scannedDevices.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600">
+                      Найдено устройств: <span className="font-semibold text-gray-900">{scannedDevices.length}</span>
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleNetworkScan}
+                    >
+                      <Icon name="RefreshCw" size={14} className="mr-2" />
+                      Повторить сканирование
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {scannedDevices.map((device, index) => (
+                      <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <Icon name="Monitor" size={16} className="text-primary" />
+                              <h4 className="font-semibold">{device.name}</h4>
+                              <Badge variant="secondary">{device.type}</Badge>
+                            </div>
+                            <div className="mt-2 space-y-1 text-sm text-gray-600">
+                              <p>IP-адрес: <span className="font-mono">{device.ip}</span></p>
+                              <p>MAC-адрес: <span className="font-mono">{device.mac}</span></p>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleAddScannedDevice(device)}
+                          >
+                            <Icon name="Plus" size={14} className="mr-2" />
+                            Добавить
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!isScanning && scannedDevices.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Icon name="Wifi" size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Нажмите кнопку "Сканировать", чтобы найти устройства в сети</p>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsScanDialogOpen(false)}>
+                  Закрыть
+                </Button>
+                {!isScanning && scannedDevices.length === 0 && (
+                  <Button onClick={handleNetworkScan}>
+                    <Icon name="Search" size={16} className="mr-2" />
+                    Сканировать
+                  </Button>
+                )}
               </div>
             </div>
           </DialogContent>
