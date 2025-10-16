@@ -112,13 +112,23 @@ const Index = () => {
     { title: 'Периферия', value: '634', icon: 'Mouse', change: '+15%' }
   ];
 
-  // Данные зданий
-  const buildings = [
+  // Данные зданий (делаем динамическим)
+  const [buildings, setBuildings] = useState([
     { id: 1, name: 'Главный офис', address: 'ул. Ленина, 15', departments: 8, equipment: 542 },
     { id: 2, name: 'Филиал №1', address: 'ул. Советская, 32', departments: 5, equipment: 298 },
     { id: 3, name: 'Склад', address: 'ул. Промышленная, 7', departments: 3, equipment: 156 },
     { id: 4, name: 'Филиал №2', address: 'ул. Мира, 44', departments: 6, equipment: 251 }
-  ];
+  ]);
+  
+  // Состояние для редактирования здания
+  const [isEditBuildingOpen, setIsEditBuildingOpen] = useState(false);
+  const [editingBuilding, setEditingBuilding] = useState(null);
+  const [buildingEditForm, setBuildingEditForm] = useState({
+    name: '',
+    address: '',
+    departments: '',
+    equipment: ''
+  });
 
   // Данные отделов
   const departments = [
@@ -393,6 +403,41 @@ const Index = () => {
 
     setIsEditDepartmentOpen(false);
     setEditingDepartment(null);
+  };
+
+  // Обработчик открытия редактирования здания
+  const handleEditBuilding = (building: any) => {
+    setEditingBuilding(building);
+    setBuildingEditForm({
+      name: building.name,
+      address: building.address,
+      departments: building.departments.toString(),
+      equipment: building.equipment.toString()
+    });
+    setIsEditBuildingOpen(true);
+  };
+
+  // Обработчик сохранения изменений здания
+  const handleSaveBuildingEdit = () => {
+    if (!buildingEditForm.name.trim() || !buildingEditForm.address.trim()) {
+      alert('Пожалуйста, заполните обязательные поля: название и адрес');
+      return;
+    }
+
+    setBuildings(prev => prev.map(building =>
+      building.id === editingBuilding.id
+        ? {
+            ...building,
+            name: buildingEditForm.name.trim(),
+            address: buildingEditForm.address.trim(),
+            departments: parseInt(buildingEditForm.departments) || 0,
+            equipment: parseInt(buildingEditForm.equipment) || 0
+          }
+        : building
+    ));
+
+    setIsEditBuildingOpen(false);
+    setEditingBuilding(null);
   };
 
   // Обработчик добавления нового типа оборудования
@@ -757,10 +802,19 @@ const Index = () => {
               {buildings.map((building) => (
                 <Card key={building.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Icon name="Building" size={20} className="mr-2" />
-                      {building.name}
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center">
+                        <Icon name="Building" size={20} className="mr-2" />
+                        {building.name}
+                      </CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEditBuilding(building)}
+                      >
+                        <Icon name="Edit" size={16} />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 mb-4">{building.address}</p>
@@ -1624,6 +1678,66 @@ const Index = () => {
                   Отмена
                 </Button>
                 <Button onClick={handleSaveDepartmentEdit}>
+                  <Icon name="Save" size={16} className="mr-2" />
+                  Сохранить изменения
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Диалог редактирования здания */}
+        <Dialog open={isEditBuildingOpen} onOpenChange={setIsEditBuildingOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Редактировать здание</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-building-name">Название здания *</Label>
+                <Input
+                  id="edit-building-name"
+                  value={buildingEditForm.name}
+                  onChange={(e) => setBuildingEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Введите название здания"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-building-address">Адрес *</Label>
+                <Input
+                  id="edit-building-address"
+                  value={buildingEditForm.address}
+                  onChange={(e) => setBuildingEditForm(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Введите адрес здания"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-building-departments">Количество отделов</Label>
+                  <Input
+                    id="edit-building-departments"
+                    type="number"
+                    value={buildingEditForm.departments}
+                    onChange={(e) => setBuildingEditForm(prev => ({ ...prev, departments: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-building-equipment">Всего оборудования</Label>
+                  <Input
+                    id="edit-building-equipment"
+                    type="number"
+                    value={buildingEditForm.equipment}
+                    onChange={(e) => setBuildingEditForm(prev => ({ ...prev, equipment: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsEditBuildingOpen(false)}>
+                  Отмена
+                </Button>
+                <Button onClick={handleSaveBuildingEdit}>
                   <Icon name="Save" size={16} className="mr-2" />
                   Сохранить изменения
                 </Button>
