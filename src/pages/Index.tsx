@@ -86,6 +86,7 @@ const Index = () => {
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
   const [scannedDevices, setScannedDevices] = useState([]);
   const [subnetInput, setSubnetInput] = useState('192.168.1.0/24');
+  const [scanHistory, setScanHistory] = useState([]);
   
   // Типы оборудования (можно расширять)
   const [equipmentTypes, setEquipmentTypes] = useState([
@@ -522,6 +523,8 @@ const Index = () => {
       });
     }, 200);
 
+    const scanStartTime = new Date();
+
     try {
       // Вызов backend функции с указанной подсетью
       const response = await fetch(`https://functions.poehali.dev/f02e295a-b094-4f67-9118-fad70534a1b1?subnet=${encodeURIComponent(subnetInput)}`);
@@ -532,6 +535,16 @@ const Index = () => {
 
       if (data.devices && Array.isArray(data.devices)) {
         setScannedDevices(data.devices);
+        
+        // Добавляем в историю сканирований
+        const historyItem = {
+          id: Date.now(),
+          subnet: subnetInput,
+          devicesFound: data.devices.length,
+          timestamp: scanStartTime,
+          devices: data.devices
+        };
+        setScanHistory(prev => [historyItem, ...prev].slice(0, 10)); // Храним последние 10 сканирований
       }
     } catch (error) {
       console.error('Ошибка сканирования:', error);
@@ -539,10 +552,21 @@ const Index = () => {
       setScanProgress(100);
       
       // Фолбэк на локальные данные при ошибке
-      setScannedDevices([
+      const fallbackDevices = [
         { ip: '192.168.1.10', name: 'Dell OptiPlex 9020', type: 'Компьютер', mac: 'A4:BA:DB:12:34:56' },
         { ip: '192.168.1.15', name: 'HP LaserJet P3015', type: 'Принтер', mac: 'D0:7E:28:AB:CD:EF' }
-      ]);
+      ];
+      setScannedDevices(fallbackDevices);
+      
+      // Добавляем в историю даже при ошибке
+      const historyItem = {
+        id: Date.now(),
+        subnet: subnetInput,
+        devicesFound: fallbackDevices.length,
+        timestamp: scanStartTime,
+        devices: fallbackDevices
+      };
+      setScanHistory(prev => [historyItem, ...prev].slice(0, 10));
     } finally {
       setIsScanning(false);
     }
@@ -565,6 +589,25 @@ const Index = () => {
 
     setEquipmentData(prev => [...prev, newEquipment]);
     setScannedDevices(prev => prev.filter(d => d.ip !== device.ip));
+  };
+
+  // Экспорт истории сканирований в CSV
+  const handleExportScanHistory = () => {
+    if (scanHistory.length === 0) return;
+    
+    let csvContent = 'Дата и время,Подсеть,Найдено устройств,Устройства\n';
+    
+    scanHistory.forEach(scan => {
+      const dateStr = new Date(scan.timestamp).toLocaleString('ru-RU');
+      const devicesList = scan.devices.map(d => `${d.name} (${d.ip})`).join('; ');
+      csvContent += `"${dateStr}","${scan.subnet}",${scan.devicesFound},"${devicesList}"\n`;
+    });
+    
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `История_сканирований_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   // Обработчик экспорта данных
@@ -1886,6 +1929,81 @@ const Index = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* История сканирований */}
+                  {scanHistory.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>История сканирований ({scanHistory.length})</Label>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={handleExportScanHistory}
+                            className="text-primary hover:text-primary/80"
+                          >
+                            <Icon name="Download" size={14} className="mr-1" />
+                            Экспорт
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setScanHistory([])}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Icon name="Trash2" size={14} className="mr-1" />
+                            Очистить
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto space-y-2 border rounded-lg p-2 bg-gray-50">
+                        {scanHistory.map((scan) => (
+                          <div 
+                            key={scan.id}
+                            className="flex items-center justify-between p-2 bg-white rounded hover:bg-blue-50 transition-colors cursor-pointer border"
+                            onClick={() => {
+                              setSubnetInput(scan.subnet);
+                              setScannedDevices(scan.devices);
+                            }}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <Icon name="History" size={14} className="text-gray-500" />
+                                <span className="font-mono text-sm font-medium">{scan.subnet}</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(scan.timestamp).toLocaleString('ru-RU', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="ml-2">
+                              {scan.devicesFound} {scan.devicesFound === 1 ? 'устройство' : scan.devicesFound < 5 ? 'устройства' : 'устройств'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-600 bg-white rounded p-2 border">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <Icon name="Network" size={12} className="inline mr-1" />
+                            Всего сканирований: <span className="font-semibold">{scanHistory.length}</span>
+                          </div>
+                          <div>
+                            <Icon name="Monitor" size={12} className="inline mr-1" />
+                            Найдено устройств: <span className="font-semibold">{scanHistory.reduce((sum, scan) => sum + scan.devicesFound, 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        💡 Нажмите на запись, чтобы просмотреть результаты сканирования
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
